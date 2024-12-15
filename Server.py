@@ -20,7 +20,7 @@ def handle_client(conn, addr):
 
     try:
         # Read and process input file
-        with open("risk.bmp", "rb") as dat_file:
+        with open("requirements.txt", "rb") as dat_file:
             dat_file.seek(0, 2)
             file_size = dat_file.tell()
             dat_file.seek(0)

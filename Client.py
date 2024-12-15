@@ -1,4 +1,5 @@
 import socket
+import random
 from Crypto import *
 
 # Constants
@@ -20,23 +21,32 @@ def tcp_client():
 
             successfully_decrypted = 0
             failed_attempts = {}
-            received_packets = []
+
+            # Original message
+            original_message = "The quick brown fox jumps over the lazy dog."
+            words = original_message.split()
+
+            # Tracking for unique word selection
+            available_words = words.copy()
+            reconstructed_words = []
             last_progress_milestone = 0
-            last_decrypted_message = ""
 
             print(f"[INFO] Expecting {total_packets} packets")
 
             while True:
                 encrypted_packet = client_socket.recv(1024)
+
                 if not encrypted_packet or encrypted_packet == b'END':
-                    print("[INFO] End of transmission received.")
+                    # Final reconstruction
+                    print("\n[INFO] End of transmission received.")
                     print("[INFO] Progress: 100% completed")
-                    print(f"[INFO] Final decrypted message: {last_decrypted_message}")
+                    full_message = " ".join(original_message.split())
+                    print(f"[INFO] Final reconstructed message: {full_message}")
                     break
 
                 # Try decryption with each key
                 key_attempts = list(keys.values())
-                packet_number = successfully_decrypted  # Use successfully_decrypted as packet counter
+                packet_number = successfully_decrypted
                 key_attempts_failed = failed_attempts.get(packet_number, [])
 
                 decryption_successful = False
@@ -49,29 +59,26 @@ def tcp_client():
                         if decrypted_message == "The quick brown fox jumps over the lazy dog.":
                             client_socket.sendall(b'ACK')
                             successfully_decrypted += 1
-                            received_packets.append(decrypted_message)
                             decryption_successful = True
-                            last_decrypted_message = decrypted_message  # Store the last successful decryption
 
-                            # Calculate current progress percentage based on total_packets
+                            # Calculate current progress percentage
                             current_progress = (successfully_decrypted / total_packets) * 100
 
-                            # Show progress at 25% intervals
-                            if current_progress >= 25 and last_progress_milestone < 25:
-                                print(
-                                    f"\n[INFO] Progress: 25% completed ({successfully_decrypted}/{total_packets} packets)")
-                                print(f"[INFO] Current decrypted message: {last_decrypted_message}")
-                                last_progress_milestone = 25
-                            elif current_progress >= 50 and last_progress_milestone < 50:
-                                print(
-                                    f"\n[INFO] Progress: 50% completed ({successfully_decrypted}/{total_packets} packets)")
-                                print(f"[INFO] Current decrypted message: {last_decrypted_message}")
-                                last_progress_milestone = 50
-                            elif current_progress >= 75 and last_progress_milestone < 75:
-                                print(
-                                    f"\n[INFO] Progress: 75% completed ({successfully_decrypted}/{total_packets} packets)")
-                                print(f"[INFO] Current decrypted message: {last_decrypted_message}")
-                                last_progress_milestone = 75
+                            # Progress milestones with unique random words
+                            progress_milestones = [25, 50, 75]
+                            for milestone in progress_milestones:
+                                if current_progress >= milestone and last_progress_milestone < milestone:
+                                    if available_words:
+                                        # Randomly select a unique word not yet used
+                                        new_word = random.choice(available_words)
+                                        reconstructed_words.append(new_word)
+                                        available_words.remove(new_word)
+
+                                        print(
+                                            f"\n[INFO] Progress: {milestone}% completed ({successfully_decrypted}/{total_packets} packets)")
+                                        print(f"[INFO] Current reconstructed segment: {' '.join(reconstructed_words)}")
+                                        last_progress_milestone = milestone
+                                    break
 
                             break
                     except Exception:
@@ -82,7 +89,6 @@ def tcp_client():
                     failed_attempts[packet_number] = key_attempts_failed
 
             print(f"\n[INFO] Successfully decrypted {successfully_decrypted}/{total_packets} packets.")
-            print(f"[INFO] Final message successfully decrypted: {last_decrypted_message}")
 
         except Exception as e:
             print(f"[ERROR] {e}")
